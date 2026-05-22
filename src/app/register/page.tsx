@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { registerWithUsername } from "@/lib/auth-service";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase/client";
 import { PACKAGES } from "@/lib/packages";
 
 export default function RegisterPage() {

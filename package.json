@@ -17,6 +17,7 @@
     "lucide-react": "^0.378.0",
     "clsx": "^2.1.1",
     "tailwind-merge": "^2.3.0"
+    ,"sonner":"^1.0.0"
   },
   "devDependencies": {
     "typescript": "^5",
