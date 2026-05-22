@@ -1,14 +1,23 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
+import { Star, Eye, EyeOff, Loader2, AlertCircle, CheckCircle } from "lucide-react";
 import { registerWithUsername } from "@/lib/auth-service";
 import { supabase } from "@/lib/supabase/client";
 import { PACKAGES } from "@/lib/packages";
 
 export default function RegisterPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <RegisterClient />
+    </Suspense>
+  );
+}
+
+function RegisterClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const selectedPlanId = searchParams.get("plan") || "starter";
@@ -85,7 +94,7 @@ export default function RegisterPage() {
         package_id: selectedPlan.id,
         package_activated_at: new Date().toISOString(),
         package_expires_at: new Date(
-          Date.now() + selectedPlan.duration_days * 24 * 60 * 60 * 1000
+          Date.now() + selectedPlan.durationDays * 24 * 60 * 60 * 1000
         ).toISOString(),
         status: selectedPlan.id === "starter" ? "active" : "pending",
       }).eq("id", profile.id);
