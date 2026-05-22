@@ -1,33 +1,19 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Eye, EyeOff, Star, Loader2, AlertCircle } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
+import { toast } from "sonner";
+import { loginWithUsername } from "@/lib/auth-service";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function LoginPage() {
-  return (
-    <Suspense
-      fallback={
-        <div className="min-h-screen galaxy-bg flex items-center justify-center px-4 py-12">
-          <div className="text-white">Loading...</div>
-        </div>
-      }
-    >
-      <LoginForm />
-    </Suspense>
-  );
-}
-
-function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get("redirect") || "/dashboard";
 
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -36,42 +22,37 @@ function LoginForm() {
     setLoading(true);
     setError(null);
 
-    if (!email.trim() || !password.trim()) {
-      setError("Please enter both email and password.");
+    if (!username.trim() || !password.trim()) {
+      setError("Please enter both username and password.");
       setLoading(false);
       return;
     }
 
     try {
-      const supabase = createClient();
-      const { data, error: authError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (authError) {
-        setError(
-          authError.message || "Incorrect email or password. Please try again."
-        );
+      const result = await loginWithUsername({ username, password });
+      if (!result.success) {
+        setError(result.error || "Login failed");
         return;
       }
 
-      if (!data?.user) {
-        setError(
-          data?.session
-            ? "Unable to sign you in right now. Please try again."
-            : "Please verify your email or reset your password before signing in."
-        );
-        return;
+      // Check for admin role
+      let targetRoute = "/dashboard";
+      if (result.user?.id) {
+        const { data: roles } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", result.user.id);
+        if (roles?.some((r) => r.role === "admin")) {
+          targetRoute = "/admin";
+        }
       }
 
-      router.push(redirectTo);
-    } catch (error: unknown) {
-      console.error("Login error:", error);
+      toast.success("Welcome back! Redirecting...");
+      router.push(targetRoute);
+    } catch (err: unknown) {
+      console.error("Login error:", err);
       setError(
-        error instanceof Error
-          ? error.message
-          : "Network error. Please try again shortly."
+        err instanceof Error ? err.message : "Network error. Please try again."
       );
     } finally {
       setLoading(false);
@@ -89,7 +70,7 @@ function LoginForm() {
             <span className="text-2xl font-bold text-white">MetaOrbit</span>
           </Link>
           <h1 className="text-3xl font-bold text-white mb-2">Welcome back</h1>
-          <p className="text-gray-400">Sign in with your email and password.</p>
+          <p className="text-gray-400">Sign in with your username and password.</p>
         </div>
 
         <div className="glass rounded-2xl p-8">
@@ -102,14 +83,12 @@ function LoginForm() {
 
           <form onSubmit={handleLogin} className="space-y-5">
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Email address
-              </label>
+              <label className="block text-sm font-medium text-gray-300 mb-2">Username</label>
               <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@example.com"
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="john_doe"
                 required
                 className="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200"
               />
@@ -117,19 +96,14 @@ function LoginForm() {
 
             <div>
               <div className="flex items-center justify-between mb-2">
-                <label className="block text-sm font-medium text-gray-300">
-                  Password
-                </label>
-                <Link
-                  href="/forgot-password"
-                  className="text-sm text-indigo-400 hover:text-indigo-300 transition-colors"
-                >
+                <label className="block text-sm font-medium text-gray-300">Password</label>
+                <Link href="/forgot-password" className="text-sm text-indigo-400 hover:text-indigo-300 transition-colors">
                   Forgot password?
                 </Link>
               </div>
               <div className="relative">
                 <input
-                  type={showPassword ? "text" : "password"}
+                  type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
@@ -163,11 +137,8 @@ function LoginForm() {
           </form>
 
           <p className="text-center text-gray-400 mt-6">
-            Don’t have an account?{" "}
-            <Link
-              href="/register"
-              className="text-indigo-400 hover:text-indigo-300 font-semibold transition-colors"
-            >
+            Don’t have an account?{' '}
+            <Link href="/register" className="text-indigo-400 hover:text-indigo-300 font-semibold transition-colors">
               Create one
             </Link>
           </p>

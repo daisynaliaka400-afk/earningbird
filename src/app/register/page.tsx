@@ -1,41 +1,25 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Eye, EyeOff, Star, Loader2, AlertCircle, CheckCircle } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
+import { toast } from "sonner";
+import { registerWithUsername } from "@/lib/auth-service";
+import { supabase } from "@/integrations/supabase/client";
 import { PACKAGES } from "@/lib/packages";
 
 export default function RegisterPage() {
-  return (
-    <Suspense
-      fallback={
-        <div className="min-h-screen galaxy-bg flex items-center justify-center px-4 py-12">
-          <div className="text-white">Loading...</div>
-        </div>
-      }
-    >
-      <RegisterClient />
-    </Suspense>
-  );
-}
-
-function RegisterClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const selectedPlanId = searchParams.get("plan") || "starter";
-  const selectedPlan =
-    PACKAGES.find((plan) => plan.id === selectedPlanId) || PACKAGES[0];
+  const selectedPlan = PACKAGES.find((p) => p.id === selectedPlanId) || PACKAGES[0];
 
   const [formData, setFormData] = useState({
-    full_name: "",
-    email: "",
+    username: "",
+    phone: "",
     password: "",
-    confirm_password: "",
+    confirmPassword: "",
   });
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -45,19 +29,19 @@ function RegisterClient() {
   };
 
   const validateForm = () => {
-    if (!formData.full_name.trim()) {
-      setError("Full name is required.");
+    if (!formData.username.trim()) {
+      setError("Username is required.");
       return false;
     }
-    if (!formData.email.trim()) {
-      setError("Email is required.");
+    if (!formData.phone.trim()) {
+      setError("Phone number is required.");
       return false;
     }
     if (formData.password.length < 8) {
-      setError("Password must be at least 8 characters long.");
+      setError("Password must be at least 8 characters.");
       return false;
     }
-    if (formData.password !== formData.confirm_password) {
+    if (formData.password !== formData.confirmPassword) {
       setError("Passwords do not match.");
       return false;
     }
@@ -73,57 +57,49 @@ function RegisterClient() {
     setLoading(true);
 
     try {
-      const supabase = createClient();
-      const { data, error: authError } = await supabase.auth.signUp({
-        email: formData.email,
+      const result = await registerWithUsername({
+        username: formData.username.trim(),
+        phone: formData.phone.trim(),
         password: formData.password,
-        options: {
-          data: {
-            full_name: formData.full_name,
-            plan: selectedPlan.id,
-          },
-        },
+        referral_code: searchParams.get("ref") || undefined,
       });
 
-      if (authError) {
-        setError(authError.message || "Unable to create account. Please try again.");
+      if (!result.success) {
+        setError(result.error || "Registration failed");
         return;
       }
 
-      if (!data?.user) {
-        setError(
-          "Unable to create account. Please verify your email and try again."
-        );
+      // Assign package
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("id, username, phone, email")
+        .eq("username", formData.username.trim())
+        .single();
+
+      if (!profile) {
+        setError("Profile not found after registration.");
         return;
       }
 
-      await supabase.from("profiles").insert({
-        user_id: data.user.id,
-        full_name: formData.full_name,
-        email: formData.email,
-        plan: selectedPlan.id,
-        wallet_balance: 0,
-        total_earned: 0,
-        account_status: selectedPlan.id === "starter" ? "active" : "pending",
-      });
+      await supabase.from("profiles").update({
+        package_id: selectedPlan.id,
+        package_activated_at: new Date().toISOString(),
+        package_expires_at: new Date(
+          Date.now() + selectedPlan.duration_days * 24 * 60 * 60 * 1000
+        ).toISOString(),
+        status: selectedPlan.id === "starter" ? "active" : "pending",
+      }).eq("id", profile.id);
 
       if (selectedPlan.id !== "starter") {
         router.push(`/payment?plan=${selectedPlan.id}`);
         return;
       }
 
-      if (data.session) {
-        router.push("/dashboard");
-        return;
-      }
-
       setSuccess(true);
-    } catch (error: unknown) {
-      console.error("Registration error:", error);
+    } catch (err: unknown) {
+      console.error("Registration error:", err);
       setError(
-        error instanceof Error
-          ? error.message
-          : "An unexpected error occurred. Please try again."
+        err instanceof Error ? err.message : "An unexpected error occurred."
       );
     } finally {
       setLoading(false);
@@ -138,9 +114,9 @@ function RegisterClient() {
             <div className="w-16 h-16 rounded-full bg-green-500/20 flex items-center justify-center mx-auto mb-4">
               <CheckCircle className="w-8 h-8 text-green-400" />
             </div>
-            <h2 className="text-2xl font-bold text-white mb-2">Check your email!</h2>
+            <h2 className="text-2xl font-bold text-white mb-2">Check your phone!</h2>
             <p className="text-gray-400 mb-6">
-              We sent a sign-in link to <span className="text-indigo-400 font-semibold">{formData.email}</span>.
+              We sent a verification code to <span className="text-indigo-400 font-semibold">{formData.phone}</span>.
               Follow it to finish account creation.
             </p>
             <Link
@@ -181,26 +157,26 @@ function RegisterClient() {
 
           <form onSubmit={handleRegister} className="space-y-5">
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">Full Name</label>
+              <label className="block text-sm font-medium text-gray-300 mb-2">Username</label>
               <input
                 type="text"
-                name="full_name"
-                value={formData.full_name}
+                name="username"
+                value={formData.username}
                 onChange={handleChange}
-                placeholder="John Doe"
+                placeholder="john_doe"
                 required
                 className="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">Email address</label>
+              <label className="block text-sm font-medium text-gray-300 mb-2">Phone</label>
               <input
-                type="email"
-                name="email"
-                value={formData.email}
+                type="text"
+                name="phone"
+                value={formData.phone}
                 onChange={handleChange}
-                placeholder="you@example.com"
+                placeholder="+2547XXXXXXXX"
                 required
                 className="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200"
               />
@@ -208,47 +184,28 @@ function RegisterClient() {
 
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">Password</label>
-              <div className="relative">
-                <input
-                  type={showPassword ? "text" : "password"}
-                  name="password"
-                  value={formData.password}
-                  onChange={handleChange}
-                  placeholder="Min. 8 characters"
-                  required
-                  minLength={8}
-                  className="w-full px-4 py-3 pr-12 rounded-xl bg-white/10 border border-white/20 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition-colors"
-                >
-                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                </button>
-              </div>
+              <input
+                type="password"
+                name="password"
+                value={formData.password}
+                onChange={handleChange}
+                placeholder="••••••••"
+                required
+                className="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200"
+              />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">Confirm Password</label>
-              <div className="relative">
-                <input
-                  type={showConfirmPassword ? "text" : "password"}
-                  name="confirm_password"
-                  value={formData.confirm_password}
-                  onChange={handleChange}
-                  placeholder="Repeat your password"
-                  required
-                  className="w-full px-4 py-3 pr-12 rounded-xl bg-white/10 border border-white/20 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition-colors"
-                >
-                  {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                </button>
-              </div>
+              <input
+                type="password"
+                name="confirmPassword"
+                value={formData.confirmPassword}
+                onChange={handleChange}
+                placeholder="••••••••"
+                required
+                className="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200"
+              />
             </div>
 
             <button
@@ -259,27 +216,16 @@ function RegisterClient() {
               {loading ? (
                 <>
                   <Loader2 className="w-5 h-5 animate-spin" />
-                  Creating account...
+                  Creating…
                 </>
               ) : (
-                "Create Account"
+                "Create account"
               )}
             </button>
           </form>
 
-          <p className="text-center text-gray-400 text-xs mt-4">
-            By creating an account, you agree to our{" "}
-            <Link href="/terms" className="text-indigo-400 hover:underline">
-              Terms of Service
-            </Link>{" "}
-            and{" "}
-            <Link href="/privacy" className="text-indigo-400 hover:underline">
-              Privacy Policy
-            </Link>
-          </p>
-
           <p className="text-center text-gray-400 mt-6">
-            Already have an account?{" "}
+            Already have an account?{' '}
             <Link href="/login" className="text-indigo-400 hover:text-indigo-300 font-semibold transition-colors">
               Sign in
             </Link>
