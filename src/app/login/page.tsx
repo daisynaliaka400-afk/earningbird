@@ -1,19 +1,14 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { Star, Eye, EyeOff, Loader2, AlertCircle } from "lucide-react";
-import { loginWithUsername } from "@/lib/auth-service";
-import { supabase } from "@/lib/supabase/client";
+import { loginWithCredentials } from "@/lib/auth-service";
 
 export default function LoginPage() {
-  return (
-    <Suspense fallback={<div>Loading...</div>}>
-      <LoginClient />
-    </Suspense>
-  );
+  return <LoginClient />;
 }
 
 function LoginClient() {
@@ -22,6 +17,7 @@ function LoginClient() {
   const redirectTo = searchParams.get("redirect") || "/dashboard";
 
   const [username, setUsername] = useState("");
+  const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -32,124 +28,124 @@ function LoginClient() {
     setLoading(true);
     setError(null);
 
-    if (!username.trim() || !password.trim()) {
-      setError("Please enter both username and password.");
+    if (!username.trim() && !phone.trim()) {
+      setError("Please enter your username or phone number.");
+      setLoading(false);
+      return;
+    }
+
+    if (!password.trim()) {
+      setError("Please enter your password.");
       setLoading(false);
       return;
     }
 
     try {
-      const result = await loginWithUsername({ username, password });
+      const result = await loginWithCredentials({
+        username,
+        phone,
+        password,
+      });
+
       if (!result.success) {
-        setError(result.error || "Login failed");
+        setError(result.error || "Login failed. Please try again.");
         return;
       }
 
-      // Check for admin role
-      let targetRoute = "/dashboard";
-      if (result.user?.id) {
-        const { data: roles } = await supabase
-          .from("user_roles")
-          .select("role")
-          .eq("user_id", result.user.id);
-        if (roles?.some((r) => r.role === "admin")) {
-          targetRoute = "/admin";
-        }
-      }
-
       toast.success("Welcome back! Redirecting...");
-      router.push(targetRoute);
+      const target = result.user?.role === "admin" ? "/admin" : redirectTo;
+      router.push(target);
     } catch (err: unknown) {
       console.error("Login error:", err);
-      setError(
-        err instanceof Error ? err.message : "Network error. Please try again."
-      );
+      setError(err instanceof Error ? err.message : "Something went wrong.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen galaxy-bg flex items-center justify-center px-4 py-12">
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(99,102,241,0.2),_transparent_25%),radial-gradient(circle_at_bottom_right,_rgba(16,185,129,0.15),_transparent_25%),#050816] text-white flex items-center justify-center px-4 py-12">
       <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <Link href="/" className="inline-flex items-center gap-2 mb-6">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-r from-indigo-500 to-purple-600 flex items-center justify-center">
-              <Star className="w-5 h-5 text-white" />
+        <div className="mb-10 text-center">
+          <Link href="/" className="inline-flex items-center gap-3 mb-6 text-white">
+            <div className="flex h-12 w-12 items-center justify-center rounded-3xl bg-gradient-to-r from-violet-500 to-cyan-400 shadow-xl shadow-cyan-500/20">
+              <Star className="h-5 w-5" />
             </div>
-            <span className="text-2xl font-bold text-white">MetaOrbit</span>
+            <span className="text-2xl font-semibold">MetaPay</span>
           </Link>
-          <h1 className="text-3xl font-bold text-white mb-2">Welcome back</h1>
-          <p className="text-gray-400">Sign in with your username and password.</p>
+          <h1 className="text-4xl font-bold">Welcome back</h1>
+          <p className="mt-3 text-slate-400">Login with your username, phone number, and password.</p>
         </div>
 
-        <div className="glass rounded-2xl p-8">
+        <div className="glass rounded-[2rem] border border-white/10 bg-white/5 p-8 shadow-2xl">
           {error && (
-            <div className="flex items-center gap-3 bg-red-500/10 border border-red-500/30 rounded-lg p-4 mb-6">
-              <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0" />
-              <p className="text-red-400 text-sm">{error}</p>
+            <div className="mb-6 rounded-3xl border border-red-500/20 bg-red-500/10 p-4 text-sm text-red-200">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="h-5 w-5 text-red-300" />
+                <span>{error}</span>
+              </div>
             </div>
           )}
 
           <form onSubmit={handleLogin} className="space-y-5">
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">Username</label>
+            <label className="block text-sm font-medium text-slate-300">
+              Username
               <input
-                type="text"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 placeholder="john_doe"
-                required
-                className="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200"
+                className="mt-2 w-full rounded-3xl border border-white/10 bg-black/20 px-4 py-3 text-white placeholder:text-slate-500 outline-none transition focus:border-cyan-400 focus:ring-2 focus:ring-cyan-500/20"
               />
-            </div>
-
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <label className="block text-sm font-medium text-gray-300">Password</label>
-                <Link href="/forgot-password" className="text-sm text-indigo-400 hover:text-indigo-300 transition-colors">
-                  Forgot password?
-                </Link>
-              </div>
-              <div className="relative">
+            </label>
+            <label className="block text-sm font-medium text-slate-300">
+              Phone number
+              <input
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="+254712345678"
+                className="mt-2 w-full rounded-3xl border border-white/10 bg-black/20 px-4 py-3 text-white placeholder:text-slate-500 outline-none transition focus:border-cyan-400 focus:ring-2 focus:ring-cyan-500/20"
+              />
+            </label>
+            <label className="block text-sm font-medium text-slate-300">
+              Password
+              <div className="relative mt-2">
                 <input
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  required
-                  className="w-full px-4 py-3 pr-12 rounded-xl bg-white/10 border border-white/20 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200"
+                  className="w-full rounded-3xl border border-white/10 bg-black/20 px-4 py-3 pr-12 text-white placeholder:text-slate-500 outline-none transition focus:border-cyan-400 focus:ring-2 focus:ring-cyan-500/20"
                 />
                 <button
                   type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition-colors"
+                  onClick={() => setShowPassword((value) => !value)}
+                  className="absolute inset-y-0 right-4 inline-flex items-center text-slate-400 transition hover:text-white"
                 >
-                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                 </button>
               </div>
-            </div>
+            </label>
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="inline-flex w-full items-center justify-center gap-3 rounded-3xl bg-gradient-to-r from-violet-500 to-cyan-400 px-6 py-4 text-base font-semibold text-slate-950 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-70"
             >
               {loading ? (
                 <>
-                  <Loader2 className="w-5 h-5 animate-spin" />
+                  <Loader2 className="h-5 w-5 animate-spin" />
                   Signing in...
                 </>
               ) : (
-                "Sign In"
+                "Sign in"
               )}
             </button>
           </form>
 
-          <p className="text-center text-gray-400 mt-6">
+          <p className="mt-6 text-center text-sm text-slate-400">
             Don’t have an account?{' '}
-            <Link href="/register" className="text-indigo-400 hover:text-indigo-300 font-semibold transition-colors">
-              Create one
+            <Link href="/register" className="font-semibold text-white hover:text-cyan-300">
+              Register now
             </Link>
           </p>
         </div>

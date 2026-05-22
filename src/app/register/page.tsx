@@ -1,45 +1,48 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
-import { Star, Eye, EyeOff, Loader2, AlertCircle, CheckCircle } from "lucide-react";
-import { registerWithUsername } from "@/lib/auth-service";
-import { supabase } from "@/lib/supabase/client";
-import { PACKAGES } from "@/lib/packages";
+import { Star, Loader2, AlertCircle } from "lucide-react";
+import { registerUser } from "@/lib/auth-service";
 
 export default function RegisterPage() {
-  return (
-    <Suspense fallback={<div>Loading...</div>}>
-      <RegisterClient />
-    </Suspense>
-  );
+  return <RegisterClient />;
 }
 
 function RegisterClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const selectedPlanId = searchParams.get("plan") || "starter";
-  const selectedPlan = PACKAGES.find((p) => p.id === selectedPlanId) || PACKAGES[0];
+  const packageQuery = searchParams.get("plan") || "starter";
 
   const [formData, setFormData] = useState({
+    full_name: "",
     username: "",
+    email: "",
     phone: "",
     password: "",
     confirmPassword: "",
+    referral_code: searchParams.get("ref") || "",
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
   const validateForm = () => {
+    if (!formData.full_name.trim()) {
+      setError("Full name is required.");
+      return false;
+    }
     if (!formData.username.trim()) {
       setError("Username is required.");
+      return false;
+    }
+    if (!formData.email.trim()) {
+      setError("Email is required.");
       return false;
     }
     if (!formData.phone.trim()) {
@@ -61,167 +64,151 @@ function RegisterClient() {
     e.preventDefault();
     setError(null);
 
-    if (!validateForm()) return;
+    if (!validateForm()) {
+      return;
+    }
 
     setLoading(true);
 
     try {
-const normalizedUsername = formData.username.trim().toLowerCase();
+      const result = await registerUser({
+        full_name: formData.full_name.trim(),
+        username: formData.username.trim(),
+        email: formData.email.trim(),
+        phone: formData.phone.trim(),
+        password: formData.password,
+        referral_code: formData.referral_code.trim() || undefined,
+      });
 
-    const result = await registerWithUsername({
-      username: normalizedUsername,
-      phone: formData.phone.trim(),
-      password: formData.password,
-      referral_code: searchParams.get("ref") || undefined,
-    });
-
-    if (!result.success) {
-      setError(result.error || "Registration failed");
-      return;
-    }
-
-    const profileId = result.user?.id;
-    if (!profileId) {
-      setError("Profile not found after registration.");
-      return;
-    }
-
-    await supabase.from("profiles").update({
-      package_id: selectedPlan.id,
-      package_activated_at: new Date().toISOString(),
-      package_expires_at: new Date(
-        Date.now() + selectedPlan.durationDays * 24 * 60 * 60 * 1000
-      ).toISOString(),
-      status: selectedPlan.id === "starter" ? "active" : "pending",
-    }).eq("id", profileId);
-
-      if (selectedPlan.id !== "starter") {
-        router.push(`/payment?plan=${selectedPlan.id}`);
+      if (!result.success) {
+        setError(result.error || "Registration failed. Please try again.");
         return;
       }
 
-      setSuccess(true);
+      toast.success("Account created. Continue to payment to activate your dashboard.");
+      router.push(`/payment?plan=${packageQuery}`);
     } catch (err: unknown) {
       console.error("Registration error:", err);
-      setError(
-        err instanceof Error ? err.message : "An unexpected error occurred."
-      );
+      setError(err instanceof Error ? err.message : "Something went wrong.");
     } finally {
       setLoading(false);
     }
   };
 
-  if (success) {
-    return (
-      <div className="min-h-screen galaxy-bg flex items-center justify-center px-4 py-12">
-        <div className="w-full max-w-md text-center">
-          <div className="glass rounded-2xl p-8">
-            <div className="w-16 h-16 rounded-full bg-green-500/20 flex items-center justify-center mx-auto mb-4">
-              <CheckCircle className="w-8 h-8 text-green-400" />
-            </div>
-            <h2 className="text-2xl font-bold text-white mb-2">Check your phone!</h2>
-            <p className="text-gray-400 mb-6">
-              We sent a verification code to <span className="text-indigo-400 font-semibold">{formData.phone}</span>.
-              Follow it to finish account creation.
-            </p>
-            <Link
-              href="/login"
-              className="inline-block bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-8 rounded-xl transition-all duration-200"
-            >
-              Go to Sign In
-            </Link>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen galaxy-bg flex items-center justify-center px-4 py-12">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <Link href="/" className="inline-flex items-center gap-2 mb-6">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-r from-indigo-500 to-purple-600 flex items-center justify-center">
-              <Star className="w-5 h-5 text-white" />
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(99,102,241,0.2),_transparent_25%),radial-gradient(circle_at_bottom,_rgba(16,185,129,0.15),_transparent_25%),#050816] text-white flex items-center justify-center px-4 py-12">
+      <div className="w-full max-w-xl">
+        <div className="mb-10 text-center">
+          <Link href="/" className="inline-flex items-center gap-3 text-white">
+            <div className="flex h-12 w-12 items-center justify-center rounded-3xl bg-gradient-to-r from-violet-500 to-cyan-400 shadow-xl shadow-cyan-500/20">
+              <Star className="h-5 w-5" />
             </div>
-            <span className="text-2xl font-bold text-white">MetaOrbit</span>
+            <span className="text-2xl font-semibold">MetaPay</span>
           </Link>
-          <h1 className="text-3xl font-bold text-white mb-2">Create account</h1>
-          <p className="text-gray-400">
-            Start with {selectedPlan.name} and begin earning with secure account activation.
-          </p>
+          <h1 className="mt-6 text-4xl font-bold">Create your MetaPay account</h1>
+          <p className="mt-3 text-slate-400">Join the platform and unlock dashboard access with a premium package.</p>
         </div>
 
-        <div className="glass rounded-2xl p-8">
+        <div className="glass rounded-[2rem] border border-white/10 bg-white/5 p-8 shadow-2xl">
           {error && (
-            <div className="flex items-center gap-3 bg-red-500/10 border border-red-500/30 rounded-lg p-4 mb-6">
-              <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0" />
-              <p className="text-red-400 text-sm">{error}</p>
+            <div className="mb-6 rounded-3xl border border-red-500/20 bg-red-500/10 p-4 text-sm text-red-200">
+              <AlertCircle className="inline-block h-5 w-5 align-middle" />
+              <span className="ml-2 align-middle">{error}</span>
             </div>
           )}
 
           <form onSubmit={handleRegister} className="space-y-5">
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">Username</label>
-              <input
-                type="text"
-                name="username"
-                value={formData.username}
-                onChange={handleChange}
-                placeholder="john_doe"
-                required
-                className="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200"
-              />
+            <div className="grid gap-5 sm:grid-cols-2">
+              <label className="block text-sm text-slate-300">
+                Full name
+                <input
+                  name="full_name"
+                  value={formData.full_name}
+                  onChange={handleChange}
+                  placeholder="Jane Doe"
+                  className="mt-2 w-full rounded-3xl border border-white/10 bg-black/20 px-4 py-3 text-white placeholder:text-slate-500 outline-none transition focus:border-cyan-400 focus:ring-2 focus:ring-cyan-500/20"
+                />
+              </label>
+              <label className="block text-sm text-slate-300">
+                Username
+                <input
+                  name="username"
+                  value={formData.username}
+                  onChange={handleChange}
+                  placeholder="john_doe"
+                  className="mt-2 w-full rounded-3xl border border-white/10 bg-black/20 px-4 py-3 text-white placeholder:text-slate-500 outline-none transition focus:border-cyan-400 focus:ring-2 focus:ring-cyan-500/20"
+                />
+              </label>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">Phone</label>
-              <input
-                type="text"
-                name="phone"
-                value={formData.phone}
-                onChange={handleChange}
-                placeholder="+2547XXXXXXXX"
-                required
-                className="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200"
-              />
+            <div className="grid gap-5 sm:grid-cols-2">
+              <label className="block text-sm text-slate-300">
+                Email
+                <input
+                  name="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  placeholder="you@example.com"
+                  className="mt-2 w-full rounded-3xl border border-white/10 bg-black/20 px-4 py-3 text-white placeholder:text-slate-500 outline-none transition focus:border-cyan-400 focus:ring-2 focus:ring-cyan-500/20"
+                />
+              </label>
+              <label className="block text-sm text-slate-300">
+                Phone
+                <input
+                  name="phone"
+                  value={formData.phone}
+                  onChange={handleChange}
+                  placeholder="+254712345678"
+                  className="mt-2 w-full rounded-3xl border border-white/10 bg-black/20 px-4 py-3 text-white placeholder:text-slate-500 outline-none transition focus:border-cyan-400 focus:ring-2 focus:ring-cyan-500/20"
+                />
+              </label>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">Password</label>
-              <input
-                type="password"
-                name="password"
-                value={formData.password}
-                onChange={handleChange}
-                placeholder="••••••••"
-                required
-                className="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200"
-              />
+            <div className="grid gap-5 sm:grid-cols-2">
+              <label className="block text-sm text-slate-300">
+                Password
+                <input
+                  name="password"
+                  type="password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  placeholder="••••••••"
+                  className="mt-2 w-full rounded-3xl border border-white/10 bg-black/20 px-4 py-3 text-white placeholder:text-slate-500 outline-none transition focus:border-cyan-400 focus:ring-2 focus:ring-cyan-500/20"
+                />
+              </label>
+              <label className="block text-sm text-slate-300">
+                Confirm password
+                <input
+                  name="confirmPassword"
+                  type="password"
+                  value={formData.confirmPassword}
+                  onChange={handleChange}
+                  placeholder="••••••••"
+                  className="mt-2 w-full rounded-3xl border border-white/10 bg-black/20 px-4 py-3 text-white placeholder:text-slate-500 outline-none transition focus:border-cyan-400 focus:ring-2 focus:ring-cyan-500/20"
+                />
+              </label>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">Confirm Password</label>
+            <label className="block text-sm text-slate-300">
+              Referral code (optional)
               <input
-                type="password"
-                name="confirmPassword"
-                value={formData.confirmPassword}
+                name="referral_code"
+                value={formData.referral_code}
                 onChange={handleChange}
-                placeholder="••••••••"
-                required
-                className="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200"
+                placeholder="Enter code or leave blank"
+                className="mt-2 w-full rounded-3xl border border-white/10 bg-black/20 px-4 py-3 text-white placeholder:text-slate-500 outline-none transition focus:border-cyan-400 focus:ring-2 focus:ring-cyan-500/20"
               />
-            </div>
+            </label>
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="inline-flex w-full items-center justify-center gap-3 rounded-3xl bg-gradient-to-r from-violet-500 to-cyan-400 px-6 py-4 text-base font-semibold text-slate-950 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-70"
             >
               {loading ? (
                 <>
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                  Creating…
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                  Creating account...
                 </>
               ) : (
                 "Create account"
@@ -229,9 +216,9 @@ const normalizedUsername = formData.username.trim().toLowerCase();
             </button>
           </form>
 
-          <p className="text-center text-gray-400 mt-6">
-            Already have an account?{' '}
-            <Link href="/login" className="text-indigo-400 hover:text-indigo-300 font-semibold transition-colors">
+          <p className="mt-6 text-center text-sm text-slate-400">
+            Already registered?{' '}
+            <Link href="/login" className="font-semibold text-white hover:text-cyan-300">
               Sign in
             </Link>
           </p>

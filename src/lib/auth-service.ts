@@ -1,29 +1,16 @@
 import { supabase } from "@/lib/supabase/client";
-
-/**
- * Simple password hashing using Web Crypto API (not production-grade)
- * For production, use bcrypt or similar on the backend
- */
-export async function hashPassword(password: string): Promise<string> {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(password);
-  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
-}
-
-export async function verifyPassword(password: string, hash: string): Promise<boolean> {
-  const hashOfInput = await hashPassword(password);
-  return hashOfInput === hash;
-}
+import { generateReferralCode } from "@/lib/utils";
 
 interface LoginCredentials {
   username: string;
+  phone: string;
   password: string;
 }
 
 interface RegisterCredentials {
+  full_name: string;
   username: string;
+  email: string;
   phone: string;
   password: string;
   referral_code?: string;
@@ -36,162 +23,153 @@ interface AuthResponse {
     id: string;
     username: string;
     phone: string;
-    email?: string;
+    email: string;
+    role?: string;
   };
 }
 
-/**
- * Login with username and password
- */
-export async function loginWithUsername(credentials: LoginCredentials): Promise<AuthResponse> {
-  try {
-    const { username, password } = credentials;
+function setAuthTokenCookie(userId: string) {
+  if (typeof window === "undefined") return;
+  document.cookie = `auth_token=${userId}; path=/; max-age=${60 * 60 * 24 * 7};`;
+}
 
-    // Fetch user by username
+export async function loginWithCredentials(
+  credentials: LoginCredentials
+): Promise<AuthResponse> {
+  try {
+    const { username, phone, password } = credentials;
+    const identifier = username.trim().toLowerCase() || phone.trim();
+
+    if (!identifier || !password.trim()) {
+      return { success: false, error: "Please enter your username or phone and password." };
+    }
+
+    const query = username.trim()
+      ? `username.eq.${username.trim().toLowerCase()}`
+      : `phone.eq.${phone.trim()}`;
+
     const { data: profile, error: fetchError } = await supabase
       .from("profiles")
-      .select("id, username, phone, password_hash, email")
-      .eq("username", username.toLowerCase())
+      .select("user_id, username, phone, email, role, account_status")
+      .or(query)
       .single();
 
     if (fetchError || !profile) {
-      return { success: false, error: "Invalid username or password" };
+      return { success: false, error: "Invalid credentials." };
     }
 
-    // Verify password
-    const passwordValid = await verifyPassword(password, profile.password_hash);
-    if (!passwordValid) {
-      return { success: false, error: "Invalid username or password" };
+    const { data: authResult, error: authError } = await supabase.auth.signInWithPassword({
+      email: profile.email,
+      password,
+    });
+
+    if (authError || !authResult.session) {
+      return { success: false, error: "Invalid credentials." };
     }
 
-    // Store in session
-    if (typeof window !== "undefined") {
-      const sessionData = {
-        userId: profile.id,
-        username: profile.username,
-        phone: profile.phone,
-        email: profile.email,
-        timestamp: Date.now(),
-      };
-      localStorage.setItem("auth_session", JSON.stringify(sessionData));
-      localStorage.setItem("auth_token", profile.id); // Simple token
-    }
+    setAuthTokenCookie(profile.user_id);
 
     return {
       success: true,
       user: {
-        id: profile.id,
+        id: profile.user_id,
         username: profile.username,
         phone: profile.phone,
         email: profile.email,
+        role: profile.role,
       },
     };
-  } catch (err) {
-    console.error("Login error:", err);
-    return { success: false, error: "An error occurred during login" };
+  } catch (error) {
+    console.error("Login error:", error);
+    return { success: false, error: "Unable to login at this time." };
   }
 }
 
-/**
- * Register with username, phone, and password
- */
-export async function registerWithUsername(credentials: RegisterCredentials): Promise<AuthResponse> {
+export async function registerUser(
+  credentials: RegisterCredentials
+): Promise<AuthResponse> {
   try {
-    const { username, phone, password, referral_code } = credentials;
+    const normalizedUsername = credentials.username.trim().toLowerCase();
+    const normalizedEmail = credentials.email.trim().toLowerCase();
+    const normalizedPhone = credentials.phone.trim();
 
-    // Check if username exists
-    const { data: existingUser } = await supabase
-      .from("profiles")
-      .select("id")
-      .eq("username", username.toLowerCase())
-      .maybeSingle();
+    const referralCode = (credentials.referral_code?.trim() || generateReferralCode()).toUpperCase();
 
-    if (existingUser) {
-      return { success: false, error: "Username already exists" };
-    }
-
-    // Hash password
-    const passwordHash = await hashPassword(password);
-
-    // Create profile
-    const normalizedUsername = username.toLowerCase();
-    const { data: newProfile, error: insertError } = await supabase
-      .from("profiles")
-      .insert([
-        {
+    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+      email: normalizedEmail,
+      password: credentials.password,
+      options: {
+        data: {
           username: normalizedUsername,
-          phone,
-          password_hash: passwordHash,
-          email: `${normalizedUsername}@metaorbit.local`,
-          status: "active",
-          balance: 0,
-          referral_code: referral_code?.toUpperCase(),
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
+          phone: normalizedPhone,
+          full_name: credentials.full_name,
+          referral_code: referralCode,
+          account_status: "inactive",
+          account_approved: false,
+          payment_verified: false,
         },
-      ])
-      .select("id, username, phone, email")
-      .single();
+      },
+    });
 
-    if (insertError || !newProfile) {
-      return { success: false, error: "Failed to create account" };
+    if (signUpError || !signUpData?.user) {
+      return { success: false, error: signUpError?.message || "Unable to create account." };
     }
 
-    // Store in session
-    if (typeof window !== "undefined") {
-      const sessionData = {
-        userId: newProfile.id,
-        username: newProfile.username,
-        phone: newProfile.phone,
-        email: newProfile.email,
-        timestamp: Date.now(),
-      };
-      localStorage.setItem("auth_session", JSON.stringify(sessionData));
-      localStorage.setItem("auth_token", newProfile.id);
+    const userId = signUpData.user.id;
+
+    const { error: profileError } = await supabase.from("profiles").insert({
+      user_id: userId,
+      full_name: credentials.full_name,
+      email: normalizedEmail,
+      username: normalizedUsername,
+      phone: normalizedPhone,
+      account_status: "inactive",
+      account_approved: false,
+      payment_verified: false,
+      package_id: null,
+      package_name: null,
+      completed_tasks: 0,
+      withdrawal_balance: 0,
+      premium_referrals_used: 0,
+      referral_code: referralCode,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    });
+
+    if (profileError) {
+      return { success: false, error: profileError.message || "Failed to save profile." };
     }
+
+    setAuthTokenCookie(userId);
 
     return {
       success: true,
       user: {
-        id: newProfile.id,
-        username: newProfile.username,
-        phone: newProfile.phone,
-        email: newProfile.email,
+        id: userId,
+        username: normalizedUsername,
+        phone: normalizedPhone,
+        email: normalizedEmail,
       },
     };
-  } catch (err) {
-    console.error("Register error:", err);
-    return { success: false, error: "An error occurred during registration" };
+  } catch (error) {
+    console.error("Register error:", error);
+    return { success: false, error: "Unable to register at this time." };
   }
 }
 
-/**
- * Logout
- */
-export function logout(): void {
+export async function logout(): Promise<void> {
   if (typeof window !== "undefined") {
-    localStorage.removeItem("auth_session");
-    localStorage.removeItem("auth_token");
+    await supabase.auth.signOut();
+    document.cookie = "auth_token=; path=/; max-age=0";
   }
 }
 
-/**
- * Get current session
- */
-export function getSession() {
+export async function getSession() {
   if (typeof window !== "undefined") {
-    const session = localStorage.getItem("auth_session");
-    return session ? JSON.parse(session) : null;
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    return user;
   }
   return null;
-}
-
-/**
- * Check if user is authenticated
- */
-export function isAuthenticated(): boolean {
-  if (typeof window !== "undefined") {
-    return !!localStorage.getItem("auth_token");
-  }
-  return false;
 }

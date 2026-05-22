@@ -44,3 +44,8 @@ export function truncateAddress(address: string, chars = 4): string {
 export function generateUsername(email: string): string {
   return email.split("@")[0].toLowerCase().replace(/[^a-z0-9]/g, "");
 }
+
+export function generateReferralCode(length = 8): string {
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  return Array.from({ length }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+}

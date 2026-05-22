@@ -1,319 +1,208 @@
 "use client";
 
 import Link from "next/link";
-import {
-  Rocket,
-  Shield,
-  Zap,
-  TrendingUp,
-  Star,
-  ArrowRight,
-  Globe,
-  Lock,
-  DollarSign,
-} from "lucide-react";
+import { ArrowRight, Zap, TrendingUp, Star, Globe, Lock } from "lucide-react";
+import LiveActivityTicker from "@/components/LiveActivityTicker";
 
 export default function HomePage() {
+  const stats = [
+    { value: "64K+", label: "Active Members" },
+    { value: "KSh 7.8M", label: "Payouts Delivered" },
+    { value: "4.9/5", label: "Member Satisfaction" },
+  ];
+
+  const plans = [
+    {
+      name: "Starter",
+      price: "KSh 500",
+      details: ["Basic earning tasks", "Account activation", "Daily reports"],
+      href: "/register?plan=starter",
+      popular: false,
+    },
+    {
+      name: "Bronze",
+      price: "KSh 1000",
+      details: ["Higher task limits", "Faster payouts", "Referral bonuses"],
+      href: "/register?plan=bronze",
+      popular: true,
+    },
+    {
+      name: "Gold",
+      price: "KSh 3500",
+      details: ["VIP campaigns", "Premium rewards", "Priority support"],
+      href: "/register?plan=gold",
+      popular: false,
+    },
+  ];
+
   return (
-    <div className="min-h-screen galaxy-bg text-white">
-      {/* Navigation */}
-      <nav className="relative z-10 flex items-center justify-between px-6 py-4 max-w-7xl mx-auto">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-full bg-gradient-to-r from-indigo-500 to-purple-600 flex items-center justify-center">
-            <Star className="w-4 h-4 text-white" />
-          </div>
-          <span className="text-xl font-bold gradient-text">
-            MetaOrbit Galaxy
-          </span>
-        </div>
-        <div className="hidden md:flex items-center gap-8">
-          <a
-            href="#features"
-            className="text-gray-300 hover:text-white transition-colors"
-          >
-            Features
-          </a>
-          <a
-            href="#pricing"
-            className="text-gray-300 hover:text-white transition-colors"
-          >
-            Pricing
-          </a>
-          <a
-            href="#about"
-            className="text-gray-300 hover:text-white transition-colors"
-          >
-            About
-          </a>
-        </div>
-        <div className="flex items-center gap-3">
-          <Link
-            href="/login"
-            className="text-gray-300 hover:text-white transition-colors font-medium"
-          >
-            Sign In
+    <main className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(99,102,241,0.25),_transparent_30%),radial-gradient(circle_at_bottom_right,_rgba(16,185,129,0.18),_transparent_20%),#020617] text-white overflow-hidden">
+      <div className="relative z-10 mx-auto max-w-7xl px-6 py-6">
+        <header className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+          <Link href="/" className="inline-flex items-center gap-3">
+            <div className="flex h-12 w-12 items-center justify-center rounded-3xl bg-gradient-to-r from-violet-500 to-cyan-400 shadow-xl shadow-cyan-500/20">
+              <Star className="h-6 w-6 text-white" />
+            </div>
+            <div>
+              <p className="text-xl font-semibold">MetaPay</p>
+              <p className="text-sm text-slate-400">Premium earning platform</p>
+            </div>
           </Link>
-          <Link
-            href="/register"
-            className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-5 rounded-lg transition-all duration-200"
-          >
-            Get Started
-          </Link>
-        </div>
-      </nav>
+          <nav className="flex flex-wrap items-center gap-4 text-sm text-slate-300">
+            <a href="#features" className="transition hover:text-white">Features</a>
+            <a href="#packages" className="transition hover:text-white">Packages</a>
+            <a href="#activity" className="transition hover:text-white">Live Activity</a>
+            <Link href="/login" className="rounded-full border border-white/10 bg-white/5 px-5 py-2 transition hover:bg-white/10">Login</Link>
+            <Link href="/register" className="rounded-full bg-gradient-to-r from-violet-500 to-cyan-400 px-6 py-2 font-semibold text-slate-950 transition hover:brightness-110">Register</Link>
+          </nav>
+        </header>
+      </div>
 
-      {/* Hero Section */}
-      <section className="relative z-10 text-center px-6 py-24 max-w-5xl mx-auto">
-        <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-full px-4 py-2 mb-8">
-          <Rocket className="w-4 h-4 text-indigo-400" />
-          <span className="text-sm text-gray-300">
-            The Future of Digital Earning
-          </span>
-        </div>
-        <h1 className="text-5xl md:text-7xl font-extrabold mb-6 leading-tight">
-          Earn in the{" "}
-          <span className="gradient-text">MetaOrbit Galaxy</span>
-        </h1>
-        <p className="text-xl text-gray-300 mb-10 max-w-2xl mx-auto leading-relaxed">
-          Join thousands of users earning digital assets through our secure,
-          transparent, and rewarding ecosystem. Start your journey today.
-        </p>
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-          <Link
-            href="/register"
-            className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 px-8 rounded-xl transition-all duration-200 text-lg w-full sm:w-auto justify-center"
-          >
-            Start Earning Now
-            <ArrowRight className="w-5 h-5" />
-          </Link>
-          <Link
-            href="/login"
-            className="flex items-center gap-2 glass text-white font-bold py-4 px-8 rounded-xl transition-all duration-200 text-lg w-full sm:w-auto justify-center hover:bg-white/10"
-          >
-            Sign In
-          </Link>
-        </div>
-
-        {/* Stats */}
-        <div className="grid grid-cols-3 gap-8 mt-20 max-w-2xl mx-auto">
-          <div className="text-center">
-            <div className="text-3xl font-bold gradient-text">50K+</div>
-            <div className="text-gray-400 text-sm mt-1">Active Users</div>
-          </div>
-          <div className="text-center">
-            <div className="text-3xl font-bold gradient-text">$2M+</div>
-            <div className="text-gray-400 text-sm mt-1">Total Earned</div>
-          </div>
-          <div className="text-center">
-            <div className="text-3xl font-bold gradient-text">99.9%</div>
-            <div className="text-gray-400 text-sm mt-1">Uptime</div>
-          </div>
-        </div>
-      </section>
-
-      {/* Features Section */}
-      <section id="features" className="relative z-10 px-6 py-20 max-w-7xl mx-auto">
-        <div className="text-center mb-16">
-          <h2 className="text-4xl font-bold mb-4">
-            Why Choose <span className="gradient-text">MetaOrbit</span>?
-          </h2>
-          <p className="text-gray-400 text-lg max-w-2xl mx-auto">
-            Built with cutting-edge technology to ensure security, speed, and
-            maximum earnings for every user.
-          </p>
-        </div>
-        <div className="grid md:grid-cols-3 gap-8">
-          {[
-            {
-              icon: Shield,
-              title: "Bank-Grade Security",
-              description:
-                "Your assets are protected with military-grade encryption and multi-factor authentication.",
-              color: "from-blue-500 to-indigo-600",
-            },
-            {
-              icon: Zap,
-              title: "Lightning Fast",
-              description:
-                "Process thousands of transactions per second with near-zero latency.",
-              color: "from-yellow-500 to-orange-600",
-            },
-            {
-              icon: TrendingUp,
-              title: "Maximum Returns",
-              description:
-                "Optimized earning strategies to maximize your returns in the digital economy.",
-              color: "from-green-500 to-emerald-600",
-            },
-            {
-              icon: Globe,
-              title: "Global Access",
-              description:
-                "Access your earnings from anywhere in the world, 24/7, 365 days a year.",
-              color: "from-purple-500 to-pink-600",
-            },
-            {
-              icon: Lock,
-              title: "Full Control",
-              description:
-                "You own your assets. No hidden fees, no lock-ins, complete transparency.",
-              color: "from-red-500 to-rose-600",
-            },
-            {
-              icon: DollarSign,
-              title: "Multiple Revenue Streams",
-              description:
-                "Diversify your earnings with staking, trading, referrals, and more.",
-              color: "from-cyan-500 to-teal-600",
-            },
-          ].map((feature, index) => (
-            <div
-              key={index}
-              className="glass rounded-2xl p-6 hover:bg-white/10 transition-all duration-300 group"
-            >
-              <div
-                className={`w-12 h-12 rounded-xl bg-gradient-to-r ${feature.color} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300`}
-              >
-                <feature.icon className="w-6 h-6 text-white" />
-              </div>
-              <h3 className="text-xl font-semibold mb-2">{feature.title}</h3>
-              <p className="text-gray-400 leading-relaxed">
-                {feature.description}
+      <section className="relative z-10 px-6 pb-20 pt-10">
+        <div className="mx-auto grid max-w-7xl gap-12 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
+          <div className="space-y-8">
+            <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-sm text-slate-100 shadow-sm shadow-cyan-500/10 backdrop-blur">
+              <Zap className="h-4 w-4 text-cyan-300" />
+              Fast access to earning tasks and payouts
+            </span>
+            <div className="space-y-6">
+              <h1 className="text-5xl font-semibold tracking-tight text-white sm:text-6xl">
+                Earn smarter with <span className="bg-gradient-to-r from-violet-400 via-cyan-300 to-emerald-400 bg-clip-text text-transparent">MetaPay</span>
+              </h1>
+              <p className="max-w-2xl text-lg leading-8 text-slate-300">
+                MetaPay combines premium task campaigns, referral rewards, in-app payments, and a modern dashboard built for serious earners.
               </p>
             </div>
-          ))}
-        </div>
-      </section>
-
-      {/* Pricing Section */}
-      <section id="pricing" className="relative z-10 px-6 py-20 max-w-7xl mx-auto">
-        <div className="text-center mb-16">
-          <h2 className="text-4xl font-bold mb-4">
-            Simple, <span className="gradient-text">Transparent</span> Pricing
-          </h2>
-          <p className="text-gray-400 text-lg">
-            Choose the plan that works best for you
-          </p>
-        </div>
-        <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-          {[
-            {
-              name: "Starter",
-              price: "KSh 499",
-              features: [
-                "Fast activation gateway",
-                "Basic earning tasks",
-                "Daily payout tracking",
-                "Email support",
-              ],
-              popular: false,
-              href: "/register?plan=starter",
-            },
-            {
-              name: "Basic",
-              price: "KSh 1,499",
-              features: [
-                "Higher task limits",
-                "Performance analytics",
-                "Faster payouts",
-                "Priority support",
-              ],
-              popular: true,
-              href: "/register?plan=basic",
-            },
-            {
-              name: "Premium",
-              price: "KSh 3,499",
-              features: [
-                "VIP campaign access",
-                "Early task rewards",
-                "Priority customer support",
-                "Higher earning ceilings",
-              ],
-              popular: false,
-              href: "/register?plan=premium",
-            },
-          ].map((plan, index) => (
-            <div
-              key={index}
-              className={`relative rounded-2xl p-8 ${
-                plan.popular
-                  ? "bg-gradient-to-b from-indigo-600 to-purple-700 border-2 border-indigo-400"
-                  : "glass"
-              }`}
-            >
-              {plan.popular && (
-                <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-gradient-to-r from-yellow-400 to-orange-500 text-black text-xs font-bold px-4 py-1 rounded-full">
-                  MOST POPULAR
-                </div>
-              )}
-              <h3 className="text-2xl font-bold mb-2">{plan.name}</h3>
-              <div className="flex items-baseline gap-1 mb-6">
-                <span className="text-4xl font-extrabold">{plan.price}</span>
-              </div>
-              <ul className="space-y-3 mb-8">
-                {plan.features.map((feature, i) => (
-                  <li key={i} className="flex items-center gap-2 text-gray-200">
-                    <div className="w-5 h-5 rounded-full bg-green-500/20 flex items-center justify-center flex-shrink-0">
-                      <svg
-                        className="w-3 h-3 text-green-400"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M5 13l4 4L19 7"
-                        />
-                      </svg>
-                    </div>
-                    {feature}
-                  </li>
-                ))}
-              </ul>
-              <Link
-                href={plan.href}
-                className={`block text-center font-bold py-3 px-6 rounded-xl transition-all duration-200 ${
-                  plan.popular
-                    ? "bg-white text-indigo-700 hover:bg-gray-100"
-                    : "bg-indigo-600 hover:bg-indigo-700 text-white"
-                }`}
-              >
-                Get Started
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+              <Link href="/register" className="inline-flex items-center justify-center gap-2 rounded-3xl bg-gradient-to-r from-violet-500 to-cyan-400 px-7 py-4 text-base font-semibold text-slate-950 shadow-2xl shadow-cyan-500/20 transition hover:brightness-110">
+                Start earning
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+              <Link href="/login" className="inline-flex items-center justify-center rounded-3xl border border-white/10 bg-white/5 px-7 py-4 text-base text-white transition hover:bg-white/10">
+                Existing account
               </Link>
             </div>
-          ))}
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+              {stats.map((stat) => (
+                <div key={stat.label} className="rounded-[1.75rem] border border-white/10 bg-white/5 p-5 text-center shadow-xl shadow-black/10 backdrop-blur">
+                  <p className="text-3xl font-semibold text-white">{stat.value}</p>
+                  <p className="mt-2 text-sm text-slate-400">{stat.label}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="rounded-[2rem] border border-white/10 bg-white/5 p-8 shadow-2xl backdrop-blur-xl">
+            <div className="space-y-6">
+              <div className="rounded-[1.75rem] bg-gradient-to-br from-violet-600 to-cyan-500 p-6 text-white shadow-xl shadow-cyan-500/10">
+                <p className="text-sm uppercase tracking-[0.3em] text-cyan-100/80">MetaPay preview</p>
+                <h2 className="mt-4 text-3xl font-semibold">Control every earning step</h2>
+                <p className="mt-4 text-sm text-cyan-100/90">Track live activity, package progress, referrals, and payout history from one premium dashboard.</p>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="rounded-3xl bg-white/5 p-5 text-slate-300">
+                  <p className="text-sm uppercase tracking-[0.3em]">Balance</p>
+                  <p className="mt-3 text-3xl font-semibold text-white">KSh 2,784</p>
+                  <p className="text-sm text-slate-400 mt-1">Ready for withdrawal when active</p>
+                </div>
+                <div className="rounded-3xl bg-white/5 p-5 text-slate-300">
+                  <p className="text-sm uppercase tracking-[0.3em]">Referrals</p>
+                  <p className="mt-3 text-3xl font-semibold text-white">14 active</p>
+                  <p className="text-sm text-slate-400 mt-1">Referral reward tracking</p>
+                </div>
+                <div className="rounded-3xl bg-white/5 p-5 text-slate-300">
+                  <p className="text-sm uppercase tracking-[0.3em]">Tasks</p>
+                  <p className="mt-3 text-3xl font-semibold text-white">8 available</p>
+                  <p className="text-sm text-slate-400 mt-1">See task categories and rewards</p>
+                </div>
+                <div className="rounded-3xl bg-white/5 p-5 text-slate-300">
+                  <p className="text-sm uppercase tracking-[0.3em]">Package</p>
+                  <p className="mt-3 text-3xl font-semibold text-white">Bronze</p>
+                  <p className="text-sm text-slate-400 mt-1">Unlock premium features</p>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="relative z-10 px-6 py-20 text-center">
-        <div className="max-w-3xl mx-auto glass rounded-3xl p-12">
-          <h2 className="text-4xl font-bold mb-4">
-            Ready to Start <span className="gradient-text">Earning</span>?
-          </h2>
-          <p className="text-gray-300 text-lg mb-8">
-            Join over 50,000 users already earning in the MetaOrbit Galaxy
-            ecosystem.
-          </p>
-          <Link
-            href="/register"
-            className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 px-10 rounded-xl transition-all duration-200 text-lg"
-          >
-            Create Free Account
-            <ArrowRight className="w-5 h-5" />
-          </Link>
+      <section id="features" className="relative z-10 px-6 pb-20">
+        <div className="mx-auto max-w-7xl">
+          <div className="mb-14 text-center">
+            <p className="text-sm uppercase tracking-[0.3em] text-cyan-200/80">Platform features</p>
+            <h2 className="mt-4 text-4xl font-semibold text-white">Modern tools for earners who want more</h2>
+            <p className="mx-auto mt-4 max-w-2xl text-base leading-7 text-slate-400">
+              MetaPay blends real-time earnings, referral rewards, secure payments, and premium dashboards to help you maximize every payout.
+            </p>
+          </div>
+
+          <div className="grid gap-6 lg:grid-cols-3">
+            {[
+              {
+                title: "In-app payment flow",
+                description: "Complete Paynecta activation inside the app without leaving MetaPay.",
+                icon: Lock,
+              },
+              {
+                title: "Real-time activity feed",
+                description: "Stay updated with every payout, activation, and referral.",
+                icon: TrendingUp,
+              },
+              {
+                title: "Premium referrals",
+                description: "Earn 10% from referrals and unlock premium rewards.",
+                icon: Globe,
+              },
+            ].map((feature) => (
+              <div key={feature.title} className="glass rounded-[2rem] border border-white/10 p-8 shadow-2xl backdrop-blur-xl">
+                <div className="mb-5 inline-flex h-14 w-14 items-center justify-center rounded-3xl bg-indigo-500/10 text-indigo-300">
+                  <feature.icon className="h-6 w-6" />
+                </div>
+                <h3 className="text-xl font-semibold text-white">{feature.title}</h3>
+                <p className="mt-3 text-slate-300">{feature.description}</p>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="relative z-10 border-t border-white/10 px-6 py-8 text-center text-gray-400">
-        <p>
-          © 2024 MetaOrbit Galaxy Earn. All rights reserved.
-        </p>
-      </footer>
-    </div>
+      <section id="packages" className="relative z-10 px-6 pb-20">
+        <div className="mx-auto max-w-7xl">
+          <div className="mb-14 text-center">
+            <p className="text-sm uppercase tracking-[0.3em] text-cyan-200/80">Pricing plans</p>
+            <h2 className="mt-4 text-4xl font-semibold text-white">Choose the right package</h2>
+          </div>
+          <div className="grid gap-6 xl:grid-cols-3">
+            {plans.map((plan) => (
+              <div key={plan.name} className={`rounded-[2rem] border border-white/10 p-8 shadow-2xl backdrop-blur-xl ${plan.popular ? "bg-gradient-to-br from-violet-600/90 to-cyan-500/80" : "bg-white/5"}`}>
+                <p className="text-sm uppercase tracking-[0.3em] text-cyan-200/80">{plan.name}</p>
+                <h3 className="mt-4 text-3xl font-semibold text-white">{plan.price}</h3>
+                <div className="mt-6 space-y-3 text-slate-300">
+                  {plan.details.map((item) => (
+                    <p key={item} className="flex items-start gap-3">
+                      <span className="mt-1 h-2.5 w-2.5 rounded-full bg-cyan-400" />
+                      <span>{item}</span>
+                    </p>
+                  ))}
+                </div>
+                <Link href={plan.href} className="mt-8 inline-flex w-full items-center justify-center rounded-3xl bg-white px-6 py-4 text-sm font-semibold text-slate-950 transition hover:brightness-110">
+                  Activate package
+                </Link>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section id="activity" className="relative z-10 px-6 pb-24">
+        <div className="mx-auto max-w-7xl">
+          <div className="mb-12 text-center">
+            <p className="text-sm uppercase tracking-[0.3em] text-cyan-200/80">Live activity</p>
+            <h2 className="mt-4 text-4xl font-semibold text-white">Real-time updates from MetaPay</h2>
+          </div>
+          <LiveActivityTicker />
+        </div>
+      </section>
+    </main>
   );
 }

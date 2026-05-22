@@ -13,18 +13,16 @@ export default async function DashboardPage() {
     redirect("/login");
   }
 
-  // Fetch user profile
   const { data: profile } = await supabase
     .from("profiles")
-    .select("*")
+    .select("*, referral_code")
     .eq("user_id", user.id)
     .single();
 
-  if (!profile || profile.account_status !== "active") {
-    redirect("/payment");
+  if (!profile) {
+    redirect("/register");
   }
 
-  // Fetch recent transactions
   const { data: transactions } = await supabase
     .from("transactions")
     .select("*")
